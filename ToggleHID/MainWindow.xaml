@@ -1,0 +1,25 @@
+﻿<Window x:Class="ToggleHID.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ToggleHID"
+        mc:Ignorable="d"
+        Title="Device Disabler" Height="447.254" Width="588.757"
+        ResizeMode="CanMinimize">
+
+    <Grid>
+        <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="Devices: " VerticalAlignment="Top"/>
+        <TextBlock HorizontalAlignment="Left" Margin="517,389,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" x:Name="DeviceEnabledTextBlock" Width="54" Height="21" TextAlignment="Center"/>
+        <TextBlock HorizontalAlignment="Left" Margin="91,389,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" x:Name="DeviceName" Width="421" Height="21" TextAlignment="Right"/>
+        <Button x:Name="ToggleButton" Content="Disable" IsEnabled="False" HorizontalAlignment="Left" Margin="10,389,0,0" VerticalAlignment="Top" Width="76" RenderTransformOrigin="0.22,0.1" Click="Button_Click"/>
+        <ListBox HorizontalAlignment="Left" Height="352" Margin="235,31,0,0" VerticalAlignment="Top" Width="336" x:Name="devicelist" SelectionChanged="Devicelist_SelectionChanged" MouseDoubleClick="devicelist_MouseDoubleClick" ItemsSource="{Binding Devices}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding FriendlyName}"></TextBlock>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <ListBox HorizontalAlignment="Left" Height="352" Margin="10,31,0,0" VerticalAlignment="Top" Width="220" x:Name="classlist" SelectionChanged="classlist_SelectionChanged"/>
+    </Grid>
+</Window>
