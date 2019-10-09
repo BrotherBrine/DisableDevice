@@ -19,14 +19,14 @@ using Newtonsoft.Json;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using static ToggleHID.GlobalHotkey;
+using static ToggleHardware.GlobalHotkey;
 using System.Threading;
 using Gma.System.MouseKeyHook;
 using KeyEventArgs = System.Windows.Forms.KeyEventArgs;
 using Application = System.Windows.Application;
 using System.ComponentModel;
 
-namespace ToggleHID
+namespace ToggleHardware
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -96,7 +96,7 @@ namespace ToggleHID
             notifyIcon = new NotifyIcon()
             {
                 ContextMenuStrip = new ContextMenuStrip(),
-                Icon = new System.Drawing.Icon($@"C:\Projects\toggle_trackpad\ToggleHID\Z3Utilities.ico"),
+                Icon = new System.Drawing.Icon($@"C:\Projects\ToggleHardware\ToggleHardware\Z3Utilities.ico"),
                 Text = "System Tray App: Device Not Present",
                 Visible = false
             };

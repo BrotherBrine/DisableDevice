@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.29230.47
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "devcon.framework", "devcon.framework\devcon.framework.csproj", "{759439BB-4180-47D6-A67F-4705FAE9DFEE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToggleHID", "ToggleHID\ToggleHID.csproj", "{AD010560-3507-426F-8DDD-0DF9E1B43E65}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToggleHardware", "ToggleHardware\ToggleHardware.csproj", "{AD010560-3507-426F-8DDD-0DF9E1B43E65}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

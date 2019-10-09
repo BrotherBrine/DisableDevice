@@ -11,7 +11,7 @@ using System.Windows.Forms;
 using System.Windows.Input;
 using Application = System.Windows.Forms.Application;
 
-namespace ToggleHID
+namespace ToggleHardware
 {
     public class GlobalHotkey
     {
