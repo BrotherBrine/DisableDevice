@@ -6,7 +6,9 @@
         xmlns:local="clr-namespace:ToggleHID"
         mc:Ignorable="d"
         Title="Device Disabler" Height="447.254" Width="588.757"
-        ResizeMode="CanMinimize">
+        ResizeMode="CanMinimize"
+        Closing="Unsubscribe"
+        StateChanged="WindowStateChangedEvent">
 
     <Grid>
         <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="Devices: " VerticalAlignment="Top"/>

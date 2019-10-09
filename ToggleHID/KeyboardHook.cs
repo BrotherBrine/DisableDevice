@@ -1,159 +1,133 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Forms;
+using System.Windows.Input;
+using Application = System.Windows.Forms.Application;
 
 namespace ToggleHID
 {
-    public class KeyboardHook
+    public class GlobalHotkey
     {
-        #region pinvoke details
-
-        private enum HookType : int
+        public class KeyboardListener : IDisposable
         {
-            WH_JOURNALRECORD = 0,
-            WH_JOURNALPLAYBACK = 1,
-            WH_KEYBOARD = 2,
-            WH_GETMESSAGE = 3,
-            WH_CALLWNDPROC = 4,
-            WH_CBT = 5,
-            WH_SYSMSGFILTER = 6,
-            WH_MOUSE = 7,
-            WH_HARDWARE = 8,
-            WH_DEBUG = 9,
-            WH_SHELL = 10,
-            WH_FOREGROUNDIDLE = 11,
-            WH_CALLWNDPROCRET = 12,
-            WH_KEYBOARD_LL = 13,
-            WH_MOUSE_LL = 14
-        }
+            private static IntPtr hookId = IntPtr.Zero;
 
-        public struct KBDLLHOOKSTRUCT
-        {
-            public UInt32 vkCode;
-            public UInt32 scanCode;
-            public UInt32 flags;
-            public UInt32 time;
-            public IntPtr extraInfo;
-        }
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr SetWindowsHookEx(
-            HookType code, HookProc func, IntPtr instance, int threadID);
-
-        [DllImport("user32.dll")]
-        private static extern int UnhookWindowsHookEx(IntPtr hook);
-
-        [DllImport("user32.dll")]
-        private static extern int CallNextHookEx(
-            IntPtr hook, int code, IntPtr wParam, ref KBDLLHOOKSTRUCT lParam);
-
-        #endregion
-
-        HookType _hookType = HookType.WH_KEYBOARD_LL;
-        IntPtr _hookHandle = IntPtr.Zero;
-        HookProc _hookFunction = null;
-
-        // hook method called by system
-        private delegate int HookProc(int code, IntPtr wParam, ref KBDLLHOOKSTRUCT lParam);
-
-        // events
-        public delegate void HookEventHandler(object sender, HookEventArgs e);
-        public event HookEventHandler KeyDown;
-        public event HookEventHandler KeyUp;
-
-        public KeyboardHook()
-        {
-            _hookFunction = new HookProc(HookCallback);
-            Install();
-        }
-
-        ~KeyboardHook()
-        {
-            Uninstall();
-        }
-
-        // hook function called by system
-        private int HookCallback(int code, IntPtr wParam, ref KBDLLHOOKSTRUCT lParam)
-        {
-            if (code < 0)
-                return CallNextHookEx(_hookHandle, code, wParam, ref lParam);
-
-            // KeyUp event
-            if ((lParam.flags & 0x80) != 0 && this.KeyUp != null)
-                this.KeyUp(this, new HookEventArgs(lParam.vkCode));
-
-            // KeyDown event
-            if ((lParam.flags & 0x80) == 0 && this.KeyDown != null)
-                this.KeyDown(this, new HookEventArgs(lParam.vkCode));
-
-            return CallNextHookEx(_hookHandle, code, wParam, ref lParam);
-        }
-
-        private void Install()
-        {
-            // make sure not already installed
-            if (_hookHandle != IntPtr.Zero)
-                return;
-
-            // need instance handle to module to create a system-wide hook
-            Module[] list = System.Reflection.Assembly.GetExecutingAssembly().GetModules();
-            System.Diagnostics.Debug.Assert(list != null && list.Length > 0);
-
-            // install system-wide hook
-            _hookHandle = SetWindowsHookEx(_hookType,
-                _hookFunction, Marshal.GetHINSTANCE(list[0]), 0);
-        }
-
-        private void Uninstall()
-        {
-            if (_hookHandle != IntPtr.Zero)
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            private IntPtr HookCallback(
+                int nCode, IntPtr wParam, IntPtr lParam)
             {
-                // uninstall system-wide hook
-                UnhookWindowsHookEx(_hookHandle);
-                _hookHandle = IntPtr.Zero;
+                try
+                {
+                    return HookCallbackInner(nCode, wParam, lParam);
+                }
+                catch
+                {
+                    Console.WriteLine("There was some error somewhere...");
+                }
+                return InterceptKeys.CallNextHookEx(hookId, nCode, wParam, lParam);
+            }
+
+            private IntPtr HookCallbackInner(int nCode, IntPtr wParam, IntPtr lParam)
+            {
+                if (nCode >= 0)
+                {
+                    if (wParam == (IntPtr)InterceptKeys.WM_KEYDOWN)
+                    {
+                        int vkCode = Marshal.ReadInt32(lParam);
+
+                        if (KeyDown != null)
+                            KeyDown(this, new RawKeyEventArgs(vkCode, false));
+                    }
+                    else if (wParam == (IntPtr)InterceptKeys.WM_KEYUP)
+                    {
+                        int vkCode = Marshal.ReadInt32(lParam);
+
+                        if (KeyUp != null)
+                            KeyUp(this, new RawKeyEventArgs(vkCode, false));
+                    }
+                }
+                return InterceptKeys.CallNextHookEx(hookId, nCode, wParam, lParam);
+            }
+
+            public event RawKeyEventHandler KeyDown;
+            public event RawKeyEventHandler KeyUp;
+
+            public KeyboardListener()
+            {
+                hookId = InterceptKeys.SetHook((InterceptKeys.LowLevelKeyboardProc)HookCallback);
+            }
+
+            ~KeyboardListener()
+            {
+                Dispose();
+            }
+
+            #region IDisposable Members
+
+            public void Dispose()
+            {
+                InterceptKeys.UnhookWindowsHookEx(hookId);
+            }
+
+            #endregion
+        }
+
+        internal static class InterceptKeys
+        {
+            public delegate IntPtr LowLevelKeyboardProc(
+                int nCode, IntPtr wParam, IntPtr lParam);
+
+            public static int WH_KEYBOARD_LL = 13;
+            public static int WM_KEYDOWN = 0x0100;
+            public static int WM_KEYUP = 0x0101;
+
+            public static IntPtr SetHook(LowLevelKeyboardProc proc)
+            {
+                using (Process curProcess = Process.GetCurrentProcess())
+                using (ProcessModule curModule = curProcess.MainModule)
+                {
+                    return SetWindowsHookEx(WH_KEYBOARD_LL, proc,
+                        GetModuleHandle(curModule.ModuleName), 0);
+                }
+            }
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern IntPtr SetWindowsHookEx(int idHook,
+                LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode,
+                IntPtr wParam, IntPtr lParam);
+
+            [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern IntPtr GetModuleHandle(string lpModuleName);
+        }
+
+        public class RawKeyEventArgs : EventArgs
+        {
+            public int VKCode;
+            public Key Key;
+            public bool IsSysKey;
+
+            public RawKeyEventArgs(int VKCode, bool isSysKey)
+            {
+                this.VKCode = VKCode;
+                this.IsSysKey = isSysKey;
+                this.Key = System.Windows.Input.KeyInterop.KeyFromVirtualKey(VKCode);
             }
         }
+
+        public delegate void RawKeyEventHandler(object sender, RawKeyEventArgs args);
     }
-
-    // The callback method converts the low-level keyboard data into something more .NET friendly with the HookEventArgs class.
-
-    public class HookEventArgs : EventArgs
-    {
-        // using Windows.Forms.Keys instead of Input.Key since the Forms.Keys maps
-        // to the Win32 KBDLLHOOKSTRUCT virtual key member, where Input.Key does not
-        public Keys Key;
-        public bool Alt;
-        public bool Control;
-        public bool Shift;
-
-        public HookEventArgs(UInt32 keyCode)
-        {
-            // detect what modifier keys are pressed, using 
-            // Windows.Forms.Control.ModifierKeys instead of Keyboard.Modifiers
-            // since Keyboard.Modifiers does not correctly get the state of the 
-            // modifier keys when the application does not have focus
-            this.Key = (Keys)keyCode;
-            this.Alt = (System.Windows.Forms.Control.ModifierKeys & Keys.Alt) != 0;
-            this.Control = (System.Windows.Forms.Control.ModifierKeys & Keys.Control) != 0;
-            this.Shift = (System.Windows.Forms.Control.ModifierKeys & Keys.Shift) != 0;
-        }
-    }
-
-    // usage: system-wide keyboard hook
-    private KeyboardHook _hook;
-
-...
-
-// install system-wide keyboard hook
-_hook = new KeyboardHook();
-    _hook.KeyDown += new KeyboardHook.HookEventHandler(OnHookKeyDown);
-
-// keyboard hook handler
-void OnHookKeyDown(object sender, HookEventArgs e)
-    {
-        ...
-}
 }

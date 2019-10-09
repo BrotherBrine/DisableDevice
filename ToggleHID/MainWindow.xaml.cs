@@ -17,6 +17,14 @@ using System.Windows.Shapes;
 using devcon.framework;
 using Newtonsoft.Json;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+using static ToggleHID.GlobalHotkey;
+using System.Threading;
+using Gma.System.MouseKeyHook;
+using KeyEventArgs = System.Windows.Forms.KeyEventArgs;
+using Application = System.Windows.Application;
+using System.ComponentModel;
 
 namespace ToggleHID
 {
@@ -38,13 +46,46 @@ namespace ToggleHID
         public DevCon dc = new DevCon();
         public bool Enabled = false;
 
+        private IKeyboardMouseEvents m_Events;
 
         public NotifyIcon notifyIcon;
+
+
+        private GlobalHotkey ghk;
+
+        private static KeyboardListener KListener = null;
+        private static IKeyboardMouseEvents HookEvents = null;
+
+
+        private IKeyboardMouseEvents m_GlobalHook;
+
+        public void Subscribe(IKeyboardMouseEvents events)
+        {
+            m_Events = events;
+            m_Events.KeyDown += OnKeyDown;
+
+        }
+
+        private void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.F7 && devicelist.SelectedIndex > -1)
+            {
+                dc.Toggle(!Enabled, (Devices[devicelist.SelectedIndex]).Path);
+                GetStatus();
+            }
+        }
+
+
+        public void Unsubscribe(object sender, CancelEventArgs e)
+        {
+            m_Events.KeyDown -= OnKeyDown;
+        }
 
 
         public MainWindow()
         {
             InitializeComponent();
+            Subscribe(Hook.GlobalEvents());
             Classes.Add("USBDevice");
             Classes.Add("Camera");
             Classes.Add("Bluetooth");
@@ -84,8 +125,9 @@ namespace ToggleHID
             {
                 Console.WriteLine(ex.Message);
             }
-            this.StateChanged += new EventHandler(WindowStateChangedEvent);            
+            
         }
+
 
         public void UpdateDeviceFriendlyName(Device device, string FriendlyName)
         {
@@ -96,10 +138,6 @@ namespace ToggleHID
             else { 
                 DeviceDictionary.Add(device.Path, FriendlyName); 
             }
-            //Device dev = Devices.FirstOrDefault<Device>(d => d.Path == device.Path);
-            //Devices[Devices.IndexOf(dev)].FriendlyName = FriendlyName;
-            //devicelist.ItemsSource = Devices;
-
             Properties.Settings.Default.deviceDictionary = JsonConvert.SerializeObject(DeviceDictionary);
             Properties.Settings.Default.Save();
 
@@ -134,7 +172,6 @@ namespace ToggleHID
         private void ListDevices(string className)
         {            
             Devices.Clear();
-            //oc.Clear();
             Devices = dc.Devices(className);
             if (DeviceDictionary != null)
             {
@@ -149,7 +186,6 @@ namespace ToggleHID
                 Device dev = Devices.FirstOrDefault<Device>(d => d.Path == SelectedItemDictionary[classlist.SelectedItem.ToString()]);
                 devicelist.ItemsSource = Devices;
                 devicelist.SelectedItem = dev;
-                //Devices[devicelist.SelectedIndex].Path;
             }
         }
 
@@ -203,7 +239,7 @@ namespace ToggleHID
             ListDevices(selected);
             Properties.Settings.Default.selectedClass = selected;
             Properties.Settings.Default.Save();
-            try
+            try 
             {
                 devicelist.SelectedItem = JsonConvert.DeserializeObject<Device>(Properties.Settings.Default.selectedDevice).Name;
             }
