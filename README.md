@@ -8,3 +8,4 @@ Next steps:
 - Clean up the UI and make it pretty
 - Add functionality for modifiers and other hotkeys
 - Add functionality for adding/removing devices to a favorites screen and make that default
+- Add option to launch at startup
