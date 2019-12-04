@@ -35,13 +35,18 @@ namespace ToggleHardware
     {
 
         Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-
-
+        int HotkeyStrokeCount = 0;
+        string SelectedHotkeys = "";
         ObservableCollection<string> oc = new ObservableCollection<string>();
         List<Device> Devices = new List<Device>();
         Dictionary<string, string> DeviceDictionary;
         Dictionary<string, string> SelectedItemDictionary;
         List<string> Classes = new List<string>();
+
+        ObservableCollection<string> TempHotkeys = new ObservableCollection<string>();
+
+        public bool Recording = false;
+
 
         public DevCon dc = new DevCon();
         public bool Enabled = false;
@@ -68,13 +73,32 @@ namespace ToggleHardware
 
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.F7 && devicelist.SelectedIndex > -1)
+
+            if (Recording & TempHotkeys.Count <= 3)
             {
-                dc.Toggle(!Enabled, (Devices[devicelist.SelectedIndex]).Path);
-                GetStatus();
+                TempHotkeys.Add(e.KeyCode.ToString());
             }
+            else if (Recording & TempHotkeys.Count > 3)
+            {
+                Recording = !Recording;
+                StopRecording();
+            }
+            else
+            {
+                CheckForHotkeys(e.KeyCode);
+            }
+            //if (e.KeyCode != e.Modifiers)
+            //if (e.KeyCode == Keys.F7 && devicelist.SelectedIndex > -1)
+            //{
+            //    dc.Toggle(!Enabled, (Devices[devicelist.SelectedIndex]).Path);
+            //    GetStatus();
+            //}
         }
 
+        public void CheckForHotkeys(Keys keyCode)
+        {
+
+        }
 
         public void Unsubscribe(object sender, CancelEventArgs e)
         {
@@ -97,7 +121,7 @@ namespace ToggleHardware
             {
                 ContextMenuStrip = new ContextMenuStrip(),
                 Icon = new System.Drawing.Icon($@"C:\Projects\ToggleHardware\ToggleHardware\Z3Utilities.ico"),
-                Text = "System Tray App: Device Not Present",
+                Text = "ToggleDevice",
                 Visible = false
             };
             notifyIcon.DoubleClick += new EventHandler(NotifyIconDoubleClickEvent);
@@ -252,6 +276,37 @@ namespace ToggleHardware
         {
             EditDevice editDevice = new EditDevice((Device) devicelist.SelectedItem);
             editDevice.Show();
+        }
+
+        private void RecordHotkeys_Click(object sender, RoutedEventArgs e)
+        {
+            Recording = !Recording;
+            if (Recording)
+            {
+                StartRecording();
+            }
+            else
+            {
+                StopRecording();
+            }
+
+        }
+
+        private void StartRecording()
+        {
+            RecordHotkeys.Content = "Stop";
+            TempHotkeys = new ObservableCollection<string>();
+        }
+
+        private void StopRecording()
+        {
+            RecordHotkeys.Content = "Record";
+            foreach (string key in TempHotkeys)
+            {
+                HotkeysTextblock.Text += $"{key} +";
+            }
+            HotkeysTextblock.Text += "++";
+            HotkeysTextblock.Text.Replace("++", "");
         }
     }
 }
